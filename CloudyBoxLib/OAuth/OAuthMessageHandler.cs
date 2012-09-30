@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using System.Net.Http.Headers;
+using CloudyBoxLib.Model;
 
 namespace CloudyBoxLib.OAuth
 {
@@ -8,6 +9,7 @@ namespace CloudyBoxLib.OAuth
         public OAuthMessageHandler(HttpMessageHandler handler)
             : base(handler)
         {
+            Login = new UserLogin();
             _authBase = new OAuthBase();
         }
 
@@ -21,8 +23,8 @@ namespace CloudyBoxLib.OAuth
                 request.RequestUri,
                 ConsumerKey,
                 ConsumerSecret,
-                _token,
-                _tokenSecret,
+                Login.Token,
+                Login.Secret,
                 request.Method.Method,
                 _authBase.GenerateTimeStamp(),
                 _authBase.GenerateNonce(),
@@ -35,12 +37,10 @@ namespace CloudyBoxLib.OAuth
             return base.SendAsync(request, cancellationToken);
         }
 
+        public UserLogin Login { get; set; }
+
         private readonly OAuthBase _authBase;
         private const string ConsumerKey = "ud1mygzz55xaory";
         private const string ConsumerSecret = "xhr7bp2ohcs541r";
-
-        private static string _token = string.Empty;
-        private static string _tokenSecret = string.Empty;
-
     }
 }

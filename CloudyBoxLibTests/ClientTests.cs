@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
+﻿using System.Diagnostics;
 using System.Threading.Tasks;
 using CloudyBoxLib;
+using CloudyBoxLib.Model;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 
 namespace CloudyBoxLibTests
@@ -17,9 +14,34 @@ namespace CloudyBoxLibTests
         {
             using (var client = new Client())
             {
-                string token = await client.CreateTokenRequest();
-                Debug.WriteLine(token);
-                Assert.IsTrue(!string.IsNullOrEmpty(token));
+                UserLogin login = await client.CreateTokenRequest();
+                
+                Assert.IsNotNull(login);
+            }
+        }
+
+        [TestMethod]
+        public void Give_A_Login_Details_And_CallBack_Url_Then_Create_Authorisation_Url()
+        {
+            using (var client = new Client())
+            {
+                //http://www.cloudyboxapp.com/?uid=6147519&oauth_token=k0izzgsunryaczf
+                var user = new UserLogin("vprwknzzk9engi9", "k0izzgsunryaczf");
+                string url = client.CreateAuthoriseUrl(user, "http://www.cloudyboxapp.com");
+                Debug.WriteLine(url);
+                Assert.IsNotNull(url);
+            }   
+        }
+
+        [TestMethod]
+        public async Task AccessToken()
+        {
+            using (var client = new Client())
+            {
+                var user = new UserLogin("vprwknzzk9engi9", "k0izzgsunryaczf");
+                client.SetUserLoginToHandler(user);
+                string res = await client.AccessToken();
+                Debug.WriteLine(res);
             }
         }
     }
