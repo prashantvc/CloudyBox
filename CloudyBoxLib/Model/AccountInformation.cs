@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using System.Diagnostics;
+using System.Runtime.Serialization;
 
 namespace CloudyBoxLib.Model
 {
@@ -6,6 +7,7 @@ namespace CloudyBoxLib.Model
     /// User account infromation class
     /// </summary>
     [DataContract]
+    [DebuggerDisplay("{DisplayName}")]
     public sealed class AccountInformation
     {
         /// <summary>

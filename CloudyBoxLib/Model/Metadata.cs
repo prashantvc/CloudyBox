@@ -1,11 +1,16 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.Serialization;
 
 namespace CloudyBoxLib.Model
 {
     /// <summary>
     /// File or folders metadat
     /// </summary>
-    public sealed class Metadata
+    [DataContract]
+    [DebuggerDisplay("{Path} IsDir = {IsDirectory}")]
+    public class Metadata
     {
         /// <summary>
         /// Gets or sets the size of file of folder
@@ -104,7 +109,7 @@ namespace CloudyBoxLib.Model
         /// The contents.
         /// </value>
         [DataMember(Name = "contents")]
-        public Metadata[] Contents { get; set; }
+        public List<Metadata> Contents { get; set; }
 
         /// <summary>
         /// Gets or sets the revision.

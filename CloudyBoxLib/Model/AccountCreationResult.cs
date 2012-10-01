@@ -5,7 +5,8 @@ namespace CloudyBoxLib.Model
     /// <summary>
     /// Account creation result
     /// </summary>
-    public sealed class AccountCreationResult
+    [DataContract]
+    public class AccountCreationResult
     {
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="AccountCreationResult" /> is success.

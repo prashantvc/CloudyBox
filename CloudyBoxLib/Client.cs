@@ -3,22 +3,32 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using CloudyBoxLib.Model;
 using CloudyBoxLib.OAuth;
+using CloudyBoxLib.Utilities;
 
 namespace CloudyBoxLib
 {
     public sealed class Client : IDisposable
     {
-        private const string BaseUrl = "https://api.dropbox.com/1/";
-        private const string ContentBaseUrl = "https://api-content.dropbox.com";
+        const string BaseUrl = "https://api.dropbox.com/1/";
+        const string ContentBaseUrl = "https://api-content.dropbox.com";
+        const string Root = "dropbox";
 
-        private readonly HttpClient _client;
-        private readonly OAuthMessageHandler _messageHandler;
+        readonly HttpClient _client;
+        readonly OAuthMessageHandler _messageHandler;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Client" /> class.
+        /// </summary>
         public Client()
             : this("ud1mygzz55xaory", "xhr7bp2ohcs541r")
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Client" /> class.
+        /// </summary>
+        /// <param name="apikey">The apikey.</param>
+        /// <param name="appSecret">The app secret.</param>
         public Client(string apikey, string appSecret)
         {
             _messageHandler = new OAuthMessageHandler(new HttpClientHandler(), apikey, appSecret, new UserLogin());
@@ -29,19 +39,56 @@ namespace CloudyBoxLib
                           };
         }
 
-        public async Task<string> GetMetadata()
+        /// <summary>
+        /// Gets the account information.
+        /// </summary>
+        /// <returns>Login user account infromation</returns>
+        public async Task<AccountInformation> GetAccountInformation()
         {
-            var res = await _client.GetAsync("metadata/dropbox");
+            var response = await _client.GetAsync("account/info");
+            response.EnsureSuccessStatusCode();
+
+            using (var stream = await response.Content.ReadAsStreamAsync())
+            {
+                return stream.ReadJsonObject<AccountInformation>();
+            }
+        }
+
+        /// <summary>
+        /// Gets the root metadata
+        /// </summary>
+        /// <returns>Metadata for the root</returns>
+        public async Task<Metadata> GetRoot()
+        {
+            return await GetMetadata(string.Empty);
+        }
+
+        /// <summary>
+        /// Gets the metadata for the given path
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns>Metadata for the path</returns>
+        public async Task<Metadata> GetMetadata(string path)
+        {
+
+            string url = string.IsNullOrEmpty(path)
+                             ? string.Format("metadata/{0}", Root)
+                             : string.Format("metadata/{0}/{1}", Root, path);
+
+            var res = await _client.GetAsync(url);
             res.EnsureSuccessStatusCode();
-         
-            return await res.Content.ReadAsStringAsync();
+           // return await res.Content.ReadAsStringAsync();
+            using (var stream = await res.Content.ReadAsStreamAsync())
+            {
+                return stream.ReadJsonObject<Metadata>();
+            }
         }
 
         /// <summary>
         /// Creates the token request.
         /// </summary>
         /// <returns>User login</returns>
-        public async Task<UserLogin> GetToken()
+        public async Task<UserLogin> RequestToken()
         {
             var response = await _client.GetAsync("oauth/request_token");
             response.EnsureSuccessStatusCode();
@@ -51,11 +98,17 @@ namespace CloudyBoxLib
             return GetUserLoginFromParams(urlParams);
         }
 
-        public async Task<string> AccessToken()
+        /// <summary>
+        /// Accesses the token.
+        /// </summary>
+        /// <returns>User login</returns>
+        public async Task<UserLogin> AccessToken()
         {
-            var res = await _client.GetAsync("oauth/access_token");
-            res.EnsureSuccessStatusCode();
-            return await res.Content.ReadAsStringAsync();
+            var response = await _client.GetAsync("oauth/access_token");
+            response.EnsureSuccessStatusCode();
+
+            string urlParams = await response.Content.ReadAsStringAsync();
+            return GetUserLoginFromParams(urlParams);
         }
 
         /// <summary>
@@ -70,12 +123,16 @@ namespace CloudyBoxLib
                 (string.IsNullOrEmpty(callbackUrl) ? string.Empty : "&oauth_callback=" + callbackUrl));
         }
 
+        /// <summary>
+        /// Sets the user login to handler.
+        /// </summary>
+        /// <param name="login">The login.</param>
         public void SetUserLoginToHandler(UserLogin login)
         {
             _messageHandler.SetLogin(login);
         }
 
-        UserLogin GetUserLoginFromParams(string urlParams)
+        static UserLogin GetUserLoginFromParams(string urlParams)
         {
             var userLogin = new UserLogin();
 
@@ -83,13 +140,14 @@ namespace CloudyBoxLib
 
             foreach (var parameter in parameters)
             {
-                if (parameter.Split('=')[0] == "oauth_token_secret")
+                switch (parameter.Split('=')[0])
                 {
-                    userLogin.Secret = parameter.Split('=')[1];
-                }
-                else if (parameter.Split('=')[0] == "oauth_token")
-                {
-                    userLogin.Token = parameter.Split('=')[1];
+                    case "oauth_token_secret":
+                        userLogin.Secret = parameter.Split('=')[1];
+                        break;
+                    case "oauth_token":
+                        userLogin.Token = parameter.Split('=')[1];
+                        break;
                 }
             }
 
