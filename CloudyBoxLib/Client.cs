@@ -8,8 +8,6 @@ namespace CloudyBoxLib
 {
     public sealed class Client : IDisposable
     {
-        private readonly string _apikey = "ud1mygzz55xaory";
-        private readonly string _appSecret = "xhr7bp2ohcs541r";
         private const string BaseUrl = "https://api.dropbox.com/1/";
         private const string ContentBaseUrl = "https://api-content.dropbox.com";
 
@@ -17,8 +15,14 @@ namespace CloudyBoxLib
         private readonly OAuthMessageHandler _messageHandler;
 
         public Client()
+            : this("ud1mygzz55xaory", "xhr7bp2ohcs541r")
         {
-            _messageHandler = new OAuthMessageHandler(new HttpClientHandler());
+        }
+
+        public Client(string apikey, string appSecret)
+        {
+            _messageHandler = new OAuthMessageHandler(new HttpClientHandler(), apikey, appSecret, new UserLogin());
+
             _client = new HttpClient(_messageHandler)
                           {
                               BaseAddress = new Uri(BaseUrl)
@@ -27,16 +31,9 @@ namespace CloudyBoxLib
 
         public async Task<string> GetMetadata()
         {
-            //metadata/dropbox/path
-            var res = await _client.GetAsync("metadata/dropbox/key.txt");
+            var res = await _client.GetAsync("metadata/dropbox");
             res.EnsureSuccessStatusCode();
-            return await res.Content.ReadAsStringAsync();
-        }
-
-        public async Task<string> AccessToken()
-        {
-            var res = await _client.GetAsync("oauth/access_token");
-            res.EnsureSuccessStatusCode();
+         
             return await res.Content.ReadAsStringAsync();
         }
 
@@ -44,7 +41,7 @@ namespace CloudyBoxLib
         /// Creates the token request.
         /// </summary>
         /// <returns>User login</returns>
-        public async Task<UserLogin> CreateTokenRequest()
+        public async Task<UserLogin> GetToken()
         {
             var response = await _client.GetAsync("oauth/request_token");
             response.EnsureSuccessStatusCode();
@@ -52,6 +49,13 @@ namespace CloudyBoxLib
             string urlParams = await response.Content.ReadAsStringAsync();
 
             return GetUserLoginFromParams(urlParams);
+        }
+
+        public async Task<string> AccessToken()
+        {
+            var res = await _client.GetAsync("oauth/access_token");
+            res.EnsureSuccessStatusCode();
+            return await res.Content.ReadAsStringAsync();
         }
 
         /// <summary>
@@ -68,7 +72,7 @@ namespace CloudyBoxLib
 
         public void SetUserLoginToHandler(UserLogin login)
         {
-            _messageHandler.Login = login;
+            _messageHandler.SetLogin(login);
         }
 
         UserLogin GetUserLoginFromParams(string urlParams)

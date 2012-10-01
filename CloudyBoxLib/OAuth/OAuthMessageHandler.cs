@@ -6,10 +6,13 @@ namespace CloudyBoxLib.OAuth
 {
     public class OAuthMessageHandler : DelegatingHandler
     {
-        public OAuthMessageHandler(HttpMessageHandler handler)
+        public OAuthMessageHandler(HttpMessageHandler handler, string apiKey, string appSecret, UserLogin login)
             : base(handler)
         {
-            Login = new UserLogin();
+            _apiKey = apiKey;
+            _appSecret = appSecret;
+
+            _login = login;
             _authBase = new OAuthBase();
         }
 
@@ -21,10 +24,10 @@ namespace CloudyBoxLib.OAuth
 
             _authBase.GenerateSignature(
                 request.RequestUri,
-                ConsumerKey,
-                ConsumerSecret,
-                Login.Token,
-                Login.Secret,
+                _apiKey,
+                _appSecret,
+                _login.Token,
+                _login.Secret,
                 request.Method.Method,
                 _authBase.GenerateTimeStamp(),
                 _authBase.GenerateNonce(),
@@ -37,10 +40,14 @@ namespace CloudyBoxLib.OAuth
             return base.SendAsync(request, cancellationToken);
         }
 
-        public UserLogin Login { get; set; }
+        public void SetLogin(UserLogin login)
+        {
+            _login = login;
+        }
 
-        private readonly OAuthBase _authBase;
-        private const string ConsumerKey = "ud1mygzz55xaory";
-        private const string ConsumerSecret = "xhr7bp2ohcs541r";
+        readonly OAuthBase _authBase;
+        readonly string _apiKey ;
+        readonly string _appSecret ;
+        private UserLogin _login;
     }
 }
