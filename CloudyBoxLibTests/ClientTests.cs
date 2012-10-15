@@ -9,7 +9,7 @@ namespace CloudyBoxLibTests
     [TestClass]
     public class ClientTests
     {
-        private readonly UserLogin _user = new UserLogin("zkxugmcicyf3i04", "e1ajz6c71paz28c");
+        private readonly UserLogin _user = new UserLogin("h85b2dyc1018zjp", "8zvszrc4mncrebf");
 
         [TestMethod]
         public async Task When_Requested_For_The_Token_Then_Return_Token_And_Secret()
@@ -26,7 +26,7 @@ namespace CloudyBoxLibTests
         {
             using (var client = new Client())
             {
-                var user = new UserLogin("n0vds74l8owc731", "h4b3usbjbzk8020");
+                var user = new UserLogin("h85b2dyc1018zjp", "8zvszrc4mncrebf");
                 string url = client.CreateAuthoriseUrl(user, "http://www.cloudyboxapp.com");
 
                 Debug.WriteLine(url);
@@ -43,7 +43,7 @@ namespace CloudyBoxLibTests
                 var metadata = await client.GetRoot();
 
                 Assert.IsNotNull(metadata);
-                Assert.AreEqual(@"/", metadata.Path);
+                Assert.AreEqual(@"/", metadata.Data.Path);
             }
         }
 
@@ -53,10 +53,10 @@ namespace CloudyBoxLibTests
             using (var client = new Client())
             {
                 client.SetUserLoginToHandler(_user);
-                var metadata = await client.GetMetadata("appfest");
+                var metadata = await client.GetMetadata("Documents");
 
                 Assert.IsNotNull(metadata);
-                Assert.AreEqual(@"/appfest", metadata.Path, true);
+                Assert.AreEqual(@"/Documents", metadata.Data.Path, true);
             }
         }
 
@@ -69,7 +69,7 @@ namespace CloudyBoxLibTests
                 var information = await client.GetAccountInformation();
 
                 Assert.IsNotNull(information);
-                Assert.AreEqual("pvc@outlook.com", information.Email);
+                Assert.AreEqual("prshntvc@gmail.com", information.Email);
             }
         }
     }

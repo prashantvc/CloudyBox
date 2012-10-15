@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.Serialization;
 
@@ -119,5 +118,19 @@ namespace CloudyBoxLib.Model
         /// </value>
         [DataMember(Name = "revision")]
         public int Revision { get; set; }
+
+        public string Title
+        {
+            get
+            {
+                var slipts = Path.Split('/');
+                if (slipts.Length > 0)
+                {
+                    return slipts[slipts.Length - 1];
+                }
+
+                return string.Empty;
+            }
+        }
     }
 }

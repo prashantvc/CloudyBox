@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using CloudyBoxLib.Model;
@@ -9,13 +11,6 @@ namespace CloudyBoxLib
 {
     public sealed class Client : IDisposable
     {
-        const string BaseUrl = "https://api.dropbox.com/1/";
-        const string ContentBaseUrl = "https://api-content.dropbox.com";
-        const string Root = "dropbox";
-
-        readonly HttpClient _client;
-        readonly OAuthMessageHandler _messageHandler;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="Client" /> class.
         /// </summary>
@@ -58,7 +53,7 @@ namespace CloudyBoxLib
         /// Gets the root metadata
         /// </summary>
         /// <returns>Metadata for the root</returns>
-        public async Task<Metadata> GetRoot()
+        public async Task<Response<Metadata>> GetRoot()
         {
             return await GetMetadata(string.Empty);
         }
@@ -68,20 +63,58 @@ namespace CloudyBoxLib
         /// </summary>
         /// <param name="path">The path.</param>
         /// <returns>Metadata for the path</returns>
-        public async Task<Metadata> GetMetadata(string path)
+        public async Task<Response<Metadata>> GetMetadata(string path)
         {
+            string url;
+            bool success;
 
-            string url = string.IsNullOrEmpty(path)
-                             ? string.Format("metadata/{0}", Root)
-                             : string.Format("metadata/{0}/{1}", Root, path);
-
-            var res = await _client.GetAsync(url);
-            res.EnsureSuccessStatusCode();
-           // return await res.Content.ReadAsStringAsync();
-            using (var stream = await res.Content.ReadAsStreamAsync())
+            if (string.IsNullOrEmpty(path))
             {
-                return stream.ReadJsonObject<Metadata>();
+                var value = GetHash(Root, out success);
+                url = success
+                          ? string.Format("metadata/{0}?hash={1}", Root, value)
+                          : string.Format("metadata/{0}", Root);
+                path = Root;
             }
+            else
+            {
+                
+                var value = GetHash(path, out success);
+                url = success
+                          ? string.Format("metadata/{0}/{1}?hash={2}", Root, path, value)
+                          : string.Format("metadata/{0}/{1}", Root, path);
+            }
+
+            var response = await _client.GetAsync(url);
+            if (response.StatusCode != HttpStatusCode.OK)
+            {
+                return new Response<Metadata>(response.StatusCode, null);
+            }
+
+            using (var stream = await response.Content.ReadAsStreamAsync())
+            {
+                var metadata = stream.ReadJsonObject<Metadata>();
+                if (metadata.Hash != null)
+                {
+                    if (_metadataHash.ContainsKey(path))
+                    {
+                        _metadataHash[path] = metadata.Hash;
+                    }
+                    else
+                    {   
+                        _metadataHash.Add(path, metadata.Hash);
+                    }
+                }
+
+                return new Response<Metadata>(response.StatusCode, metadata);
+            }
+        }
+
+        private string GetHash(string path, out bool success)
+        {
+            string value;
+            success = _metadataHash.TryGetValue(path, out value);
+            return value;
         }
 
         /// <summary>
@@ -97,18 +130,23 @@ namespace CloudyBoxLib
 
             return GetUserLoginFromParams(urlParams);
         }
-
+        
         /// <summary>
         /// Accesses the token.
         /// </summary>
         /// <returns>User login</returns>
-        public async Task<UserLogin> AccessToken()
+        public async Task<Response<UserLogin>> AccessToken()
         {
             var response = await _client.GetAsync("oauth/access_token");
-            response.EnsureSuccessStatusCode();
+            if (response.StatusCode != HttpStatusCode.OK)
+            {
+                return new Response<UserLogin>(response.StatusCode, null);
+            }
 
             string urlParams = await response.Content.ReadAsStringAsync();
-            return GetUserLoginFromParams(urlParams);
+            var userLogin = GetUserLoginFromParams(urlParams);
+
+            return new Response<UserLogin>(response.StatusCode, userLogin);
         }
 
         /// <summary>
@@ -153,6 +191,16 @@ namespace CloudyBoxLib
 
             return userLogin;
         }
+
+        const string BaseUrl = "https://api.dropbox.com/1/";
+        const string ContentBaseUrl = "https://api-content.dropbox.com";
+        const string Root = "dropbox";
+
+        readonly HttpClient _client;
+        readonly OAuthMessageHandler _messageHandler;
+
+        readonly Dictionary<string, string> _metadataHash
+            = new Dictionary<string, string>();
 
         public void Dispose()
         {

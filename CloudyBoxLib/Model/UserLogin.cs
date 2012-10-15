@@ -1,8 +1,11 @@
-﻿namespace CloudyBoxLib.Model
+﻿using System.Runtime.Serialization;
+
+namespace CloudyBoxLib.Model
 {
     /// <summary>
     /// User login details
     /// </summary>
+    [DataContract]
     public sealed class UserLogin
     {
         /// <summary>
@@ -31,6 +34,7 @@
         /// <value>
         /// The token.
         /// </value>
+        [DataMember(Name = "Token")]
         public string Token { get; set; }
 
         /// <summary>
@@ -39,6 +43,7 @@
         /// <value>
         /// The secret.
         /// </value>
+        [DataMember(Name = "Secret")]        
         public string Secret { get; set; }
 
         public override string ToString()
